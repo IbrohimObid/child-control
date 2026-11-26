@@ -109,13 +109,28 @@ public class BlockerService extends AccessibilityService {
             }
         }
 
-        // 4) Sozlamalarda shu ilovani o'chirishdan himoya
-        if (SETTINGS.contains(pkg) && Prefs.protectNow(this)) {
-            if (windowMentionsMe()) {
+        // 4) Faqat o'chirish/administrator oynasidan himoya (oddiy Sozlamalarga tegmaydi)
+        if (Prefs.protectNow(this)) {
+            String me = getString(R.string.app_name).toLowerCase();
+            boolean installer = pkg.equals("com.google.android.packageinstaller")
+                    || pkg.equals("com.android.packageinstaller")
+                    || pkg.equals("com.miui.packageinstaller");
+            if (installer && windowHas(me, null)) {
+                // «...ni o'chirmoqchimisiz?» tasdiq oynasi
+                performGlobalAction(GLOBAL_ACTION_BACK);
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            } else if (pkg.equals("com.android.settings") && windowHas(me, ADMIN_WORDS)) {
+                // qurilma administratorini o'chirish sahifasi
+                performGlobalAction(GLOBAL_ACTION_BACK);
                 performGlobalAction(GLOBAL_ACTION_HOME);
             }
         }
     }
+
+    /** Administratorni o'chirish sahifasidagi so'zlar (ru/uz/en). */
+    private static final String[] ADMIN_WORDS = {
+            "администрир", "администратор", "деактив", "device admin",
+            "administrator", "deactivate", "qurilma ma", "administratorini"};
 
     private void block(String what) {
         pauseMedia();                         // videoni pauza qiladi — PiP'ga o'tmaydi
@@ -200,24 +215,31 @@ public class BlockerService extends AccessibilityService {
         return false;
     }
 
-    /** Oynada shu ilova nomi ko'rinyaptimi (o'chirish, admin yoki maxsus imkoniyat sahifasi). */
-    private boolean windowMentionsMe() {
+    /**
+     * Faol oynada {@code name} bor va (words==null yoki words'dan biri ham) bor-yo'qligini tekshiradi.
+     * Shu bilan oddiy Sozlamalar sahifalariga tegmay, faqat o'chirish/admin oynasini aniqlaymiz.
+     */
+    private boolean windowHas(String name, String[] words) {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return false;
-        String me = getString(R.string.app_name).toLowerCase();
+        StringBuilder sb = new StringBuilder();
         ArrayDeque<AccessibilityNodeInfo> q = new ArrayDeque<>();
         q.add(root);
         int visited = 0;
-        while (!q.isEmpty() && visited < 500) {
+        while (!q.isEmpty() && visited < 600) {
             AccessibilityNodeInfo n = q.poll();
             visited++;
             if (n == null) continue;
             CharSequence t = n.getText();
-            if (t != null && t.toString().toLowerCase().contains(me)) return true;
+            if (t != null) sb.append(t).append(' ');
             CharSequence d = n.getContentDescription();
-            if (d != null && d.toString().toLowerCase().contains(me)) return true;
+            if (d != null) sb.append(d).append(' ');
             for (int i = 0; i < n.getChildCount(); i++) q.add(n.getChild(i));
         }
+        String all = sb.toString().toLowerCase();
+        if (!all.contains(name)) return false;
+        if (words == null) return true;
+        for (String w : words) if (all.contains(w)) return true;
         return false;
     }
 
