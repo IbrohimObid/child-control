@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bola Nazorati</string>
+    <string name="accessibility_desc">YouTube va ota-ona bloklagan ilovalarni yopadi. Ota-ona Telegram orqali boshqaradi.</string>
+    <string name="admin_desc">Ilovani ota-ona ruxsatisiz o\'chirib tashlashdan himoya qiladi.</string>
+</resources>
